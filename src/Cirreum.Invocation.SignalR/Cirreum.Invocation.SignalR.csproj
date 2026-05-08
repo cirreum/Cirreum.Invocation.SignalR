@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>Cirreum.Invocation</RootNamespace>
+		<Description>SignalR invocation source for the Cirreum Invocation family — concrete InvocationProviderRegistrar that maps SignalR Hubs from Cirreum:Invocation:Providers:SignalR configuration and surfaces a HubFilter that publishes IInvocationContext per Hub method invocation.</Description>
+		<PackageTags>cirreum;invocation;signalr;hub;providers</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Cirreum.InvocationProvider" Version="1.1.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="Cirreum.Providers" />
+		<Using Include="Cirreum.Invocation" />
+		<Using Include="Cirreum.Invocation.Connections" />
+	</ItemGroup>
+
+</Project>
