@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-Initial release of the Cirreum SignalR invocation source — the L3 Infrastructure package that makes SignalR a fully-supported invocation source within the Cirreum framework, with full per-method `IInvocationContext` publication, per-connection `IInvocationConnection` materialization, `IConnectionLifecycle` callback dispatch, and `IConnectionSender` server-push. Anchored by [ADR-0002](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/adr/0002-unified-invocation-context.md).
+Initial release of the Cirreum SignalR invocation source — the L3 Infrastructure package that makes SignalR a fully-supported invocation source within the Cirreum framework, with full per-method `IInvocationContext` publication, per-connection `IInvocationConnection` materialization, `IConnectionLifecycle` callback dispatch, and `IConnectionSender` server-push. Anchored by ADR-0002 (Unified `IInvocationContext` Seam).
 
 **Registrar:**
 

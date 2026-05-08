@@ -2,7 +2,7 @@
 
 Initial release. This is the L3 Infrastructure package that makes SignalR a fully-supported invocation source within the Cirreum framework — the second source after HTTP. Once paired with the matching L5 package (`Cirreum.Runtime.Invocation.SignalR`), apps can host typed SignalR Hubs that flow through the same `IInvocationContext` seam as HTTP requests, with identity, items, services, cancellation, **and** the long-lived-source abstractions (`IInvocationConnection`, `IConnectionLifecycle`, `IConnectionSender`) all unified.
 
-Anchored by [ADR-0002](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/adr/0002-unified-invocation-context.md). Release #11 in the [Invocation family rollout](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/InvocationContext/03-MIGRATION.md).
+Anchored by ADR-0002 (Unified `IInvocationContext` Seam). Release #11 in the Invocation family rollout sequence.
 
 ---
 
@@ -184,8 +184,5 @@ await app.RunAsync();
 ## See also
 
 - `CHANGELOG.md` — condensed change list for `1.0.0`.
-- [`Cirreum.InvocationProvider 1.0.1`](https://www.nuget.org/packages/Cirreum.InvocationProvider) — L2 abstractions this package implements.
+- [`Cirreum.InvocationProvider 1.1.0`](https://www.nuget.org/packages/Cirreum.InvocationProvider) — L2 abstractions this package implements.
 - [`Cirreum.Runtime.InvocationProvider 1.0.0`](https://www.nuget.org/packages/Cirreum.Runtime.InvocationProvider) — L4 helper the L5 SignalR package will use.
-- [ADR-0002](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/adr/0002-unified-invocation-context.md) — the foundational design decision.
-- [Provider-pattern integration](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/InvocationContext/02-PROVIDER-PATTERN.md) — how registrars compose with the Provider track.
-- [Migration & sequencing](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/InvocationContext/03-MIGRATION.md) — full rollout plan.

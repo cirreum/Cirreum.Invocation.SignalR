@@ -100,10 +100,11 @@ The no-method `SendAsync<T>(payload)` overload uses the runtime type name as the
 
 ## Connection lifecycle
 
-Implement `IConnectionLifecycle` (from `Cirreum.Invocation.Connections`) and register it in DI to receive `OnConnectedAsync` / `OnDisconnectedAsync` callbacks. The HubFilter dispatches both under a synthetic invocation scope so consumers like `IUserStateAccessor` work normally inside the callbacks:
+Implement `IConnectionLifecycle` (from `Cirreum.Invocation.Connections`) and register it in DI to receive `OnConnectedAsync` / `OnDisconnectedAsync` callbacks. The HubFilter dispatches both under a synthetic invocation scope so consumers like `IUserStateAccessor` work normally inside the callbacks. The `DisconnectInfo` parameter on `OnDisconnectedAsync` carries the disconnect circumstances — graceful close vs. abort, the underlying exception (if any), and a human-readable reason — populated by this adapter from SignalR's optional `Exception?` parameter:
 
 ```csharp
-internal sealed class AuditConnectionLifecycle : IConnectionLifecycle {
+internal sealed class AuditConnectionLifecycle(ILogger<AuditConnectionLifecycle> logger)
+    : IConnectionLifecycle {
 
     public ValueTask<bool> OnConnectedAsync(IInvocationConnection connection, CancellationToken ct) {
         // Inspect connection.User, connection.ConnectionId, connection.Items, etc.
@@ -111,24 +112,30 @@ internal sealed class AuditConnectionLifecycle : IConnectionLifecycle {
         return ValueTask.FromResult(true);
     }
 
-    public ValueTask OnDisconnectedAsync(IInvocationConnection connection, CancellationToken ct) {
+    public ValueTask OnDisconnectedAsync(
+        IInvocationConnection connection,
+        DisconnectInfo info,
+        CancellationToken ct) {
+
+        if (info.WasGraceful) {
+            logger.LogInformation("Connection {Id} closed cleanly", connection.ConnectionId);
+        } else if (info.Exception is not null) {
+            logger.LogWarning(info.Exception,
+                "Connection {Id} aborted: {Reason}", connection.ConnectionId, info.Reason);
+        }
+
         return ValueTask.CompletedTask;
     }
 
 }
 ```
 
+Per-transport mapping for `DisconnectInfo`: SignalR's `Exception?` parameter from `OnDisconnectedAsync(HubLifetimeContext, Exception?)` populates as `WasGraceful = exception is null`, `Exception = exception`, `Reason = exception?.Message`.
+
 ## Dependencies
 
-- **Cirreum.InvocationProvider** — L2 abstractions (`InvocationProviderRegistrar`, `IInvocationContext`, `IInvocationContextAccessor`)
+- **Cirreum.InvocationProvider** `1.1.0+` — L2 abstractions (`InvocationProviderRegistrar`, `IInvocationContext`, `IInvocationContextAccessor`, `IConnectionLifecycle`, `DisconnectInfo`, etc.)
 - **Microsoft.AspNetCore.App** (framework reference) — SignalR (`Microsoft.AspNetCore.SignalR`), endpoint routing
-
-## Documentation
-
-- [ADR-0002 — Unified `IInvocationContext` seam](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/adr/0002-unified-invocation-context.md)
-- [Type-level design](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/InvocationContext/01-DESIGN.md)
-- [Provider-pattern integration](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/InvocationContext/02-PROVIDER-PATTERN.md)
-- [Migration & sequencing](https://github.com/cirreum/Cirreum.DevOps/blob/main/docs/InvocationContext/03-MIGRATION.md)
 
 ## Versioning
 
