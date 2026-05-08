@@ -33,13 +33,13 @@ jobs:
       run: echo "Building version ${{ steps.get_version.outputs.VERSION }}"
 
     - name: Restore dependencies
-      run: dotnet restore Cirreum.Authorization.Oidc.slnx
+      run: dotnet restore Cirreum.Invocation.SignalR.slnx
 
     - name: Build
-      run: dotnet build Cirreum.Authorization.Oidc.slnx --configuration Release --no-restore -p:Version=${{ steps.get_version.outputs.VERSION }}
+      run: dotnet build Cirreum.Invocation.SignalR.slnx --configuration Release --no-restore -p:Version=${{ steps.get_version.outputs.VERSION }}
 
     - name: Pack
-      run: dotnet pack Cirreum.Authorization.Oidc.slnx --configuration Release --no-build -p:Version=${{ steps.get_version.outputs.VERSION }} -p:PackageVersion=${{ steps.get_version.outputs.VERSION }} --output ./artifacts
+      run: dotnet pack Cirreum.Invocation.SignalR.slnx --configuration Release --no-build -p:Version=${{ steps.get_version.outputs.VERSION }} -p:PackageVersion=${{ steps.get_version.outputs.VERSION }} --output ./artifacts
 
     - name: NuGet login (OIDC -> temp API key)
       uses: NuGet/login@v1
