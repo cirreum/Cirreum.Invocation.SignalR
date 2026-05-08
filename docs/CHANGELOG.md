@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Promoted the SignalR provider name from an internal string literal to a public `const`.** The `SignalRInvocationRegistrar.ProviderName` property's value was effectively a magic string (`"SignalR"`) at the L3 layer with no public anchor for consumers to reference. v1.0.0 left filtering-by-provider-name consumers (most notably the L5 `MapSignalRInvocation` implementation, which resolves `IEnumerable<InvocationProviderMapping>` and filters by `ProviderName == "SignalR"`) to hardcode the same literal — a string-drift hazard. v1.0.1 exposes the value as `public const string ProviderKey = "SignalR"` on the registrar and routes `ProviderName` through it. L5 packages and any other consumer can now reference `SignalRInvocationRegistrar.ProviderKey` instead of the literal, eliminating the drift risk. No behavior change — runtime value is unchanged.
+
 ## [1.0.0] - 2026-05-08
 
 ### Added

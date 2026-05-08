@@ -31,8 +31,14 @@ using System.Reflection;
 public sealed class SignalRInvocationRegistrar
 	: InvocationProviderRegistrar<SignalRInvocationSettings, SignalRInvocationInstanceSettings> {
 
+	/// <summary>
+	/// Represents the provider key used to identify the SignalR provider in configuration or service registration
+	/// scenarios.
+	/// </summary>
+	public const string ProviderKey = "SignalR";
+
 	/// <inheritdoc/>
-	public override string ProviderName => "SignalR";
+	public override string ProviderName => ProviderKey;
 
 	/// <inheritdoc/>
 	public override void ValidateSettings(SignalRInvocationInstanceSettings settings) {
