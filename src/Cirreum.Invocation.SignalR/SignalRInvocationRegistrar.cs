@@ -5,6 +5,7 @@ using Cirreum.Invocation.Connections;
 using Cirreum.Invocation.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -90,7 +91,15 @@ public sealed class SignalRInvocationRegistrar
 				$"No SignalRHubMapping found for instance '{key}'. " +
 				$"Did you call builder.AddInvocation(b => b.AddSignalR<THub>(\"{key}\")) at the L5 layer?");
 
-		var hub = MapHubByType(endpoints, mapping.HubType, settings.Path);
+		// Bind the instance's HttpOptions sub-section to HttpConnectionDispatcherOptions —
+		// the per-mapping config surface for transport-level concerns (Transports,
+		// ApplicationMaxBufferSize, TransportMaxBufferSize, LongPolling.PollTimeout,
+		// WebSockets.CloseTimeout, MinimumProtocolVersion, CloseOnAuthenticationExpiration).
+		// HubOptions properties live in a sibling HubOptions sub-section bound by L5
+		// AddSignalR<THub>; Cirreum framework fields (Enabled, Path, Scheme) live at the
+		// instance-section root. The three roles never collide.
+		var hub = MapHubByType(endpoints, mapping.HubType, settings.Path,
+			options => settings.Section?.GetSection("HttpOptions").Bind(options));
 
 		// Wire up the auth scheme reference if specified. Scheme references a
 		// configured Authorization instance under
@@ -101,22 +110,25 @@ public sealed class SignalRInvocationRegistrar
 
 	}
 
-	// ASP.NET's MapHub extension is generic-only — there is no MapHub(Type, string)
-	// overload in the public API. We dispatch through reflection to MapHub<THub>(string),
-	// which is acceptable because endpoint mapping happens once at startup.
+	// ASP.NET's MapHub extension is generic-only — there is no MapHub(Type, string, ...)
+	// overload in the public API. We dispatch through reflection to the 3-param
+	// MapHub<THub>(string, Action<HttpConnectionDispatcherOptions>) overload so we can
+	// pass per-mapping HttpConnectionDispatcherOptions configuration. Acceptable because
+	// endpoint mapping happens once at startup.
 	private static readonly MethodInfo _mapHubGenericMethod = typeof(HubEndpointRouteBuilderExtensions)
 		.GetMethods(BindingFlags.Public | BindingFlags.Static)
 		.First(m => m.Name == nameof(HubEndpointRouteBuilderExtensions.MapHub)
 			&& m.IsGenericMethod
-			&& m.GetParameters().Length == 2);
+			&& m.GetParameters().Length == 3);
 
 	private static HubEndpointConventionBuilder MapHubByType(
 		IEndpointRouteBuilder endpoints,
 		Type hubType,
-		string path) {
+		string path,
+		Action<HttpConnectionDispatcherOptions> configureOptions) {
 
 		var concrete = _mapHubGenericMethod.MakeGenericMethod(hubType);
-		return (HubEndpointConventionBuilder)concrete.Invoke(null, [endpoints, path])!;
+		return (HubEndpointConventionBuilder)concrete.Invoke(null, [endpoints, path, configureOptions])!;
 
 	}
 

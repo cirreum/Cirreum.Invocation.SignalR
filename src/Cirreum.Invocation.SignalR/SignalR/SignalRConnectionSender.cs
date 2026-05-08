@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 /// <summary>
 /// <see cref="IConnectionSender"/> for SignalR. Resolves the active
 /// <see cref="SignalRConnection"/> from the ambient <see cref="IInvocationContextAccessor"/>
-/// and dispatches sends through the captured <see cref="Microsoft.AspNetCore.SignalR.ISingleClientProxy"/>.
+/// and dispatches sends through the captured <see cref="ISingleClientProxy"/>.
 /// </summary>
 /// <remarks>
 /// <para>
