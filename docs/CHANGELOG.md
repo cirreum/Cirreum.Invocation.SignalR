@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-05-08
+
 ### Fixed
 
 - **`SignalRInvocationRegistrar.MapSource` now binds `HttpConnectionDispatcherOptions` from the instance's `HttpOptions` sub-section.** SignalR's per-mapping `MapHub<THub>(path, options => ...)` overload exposes transport-level config (`Transports`, `ApplicationMaxBufferSize`, `TransportMaxBufferSize`, `LongPolling.PollTimeout`, `WebSockets.CloseTimeout`, `MinimumProtocolVersion`, `CloseOnAuthenticationExpiration`) that v1.0.0 / v1.0.1 had no way to drive from configuration — the registrar called the 2-param `MapHub<THub>(path)` overload only. v1.0.2 switches the reflection helper to the 3-param overload and passes a configure delegate that binds the instance section's `HttpOptions` sub-section. Cirreum-defined sub-sections under each instance (`HubOptions`, `HttpOptions`) cleanly separate the three SignalR option surfaces (Cirreum framework fields at instance root, per-Hub `HubOptions<THub>`, per-mapping `HttpConnectionDispatcherOptions`) — paired with the L5 `Cirreum.Runtime.Invocation.SignalR` package's matching binding from the `HubOptions` sub-section. No behavior change for v1.0.1 instances that didn't declare an `HttpOptions` sub-section — the binder runs over zero properties and `HttpConnectionDispatcherOptions` retains its defaults.
