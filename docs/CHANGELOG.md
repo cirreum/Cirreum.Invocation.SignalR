@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-09
+
 ### Added
 
 - **`SignalRConnection.Abort()`** implementation of the new `IInvocationConnection.Abort()` member from `Cirreum.InvocationProvider` 1.2.0. Wraps SignalR's native `HubCallerContext.Abort()` — cancels `ConnectionAborted`, drains the connection, and triggers the Hub's `OnDisconnectedAsync`. Idempotent.
