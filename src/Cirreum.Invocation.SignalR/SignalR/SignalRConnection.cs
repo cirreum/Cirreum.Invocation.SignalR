@@ -46,6 +46,13 @@ internal sealed class SignalRConnection(
 
 	public CancellationToken Aborted => context.ConnectionAborted;
 
+	public void Abort() {
+		// HubCallerContext.Abort() is SignalR's official termination path — cancels
+		// ConnectionAborted, drains the connection, and triggers the Hub's
+		// OnDisconnectedAsync. Idempotent per SignalR contract.
+		context.Abort();
+	}
+
 	/// <summary>
 	/// Proxy to this connection's caller, captured at upgrade. Used by
 	/// <see cref="SignalRConnectionSender"/> for server-initiated push.
