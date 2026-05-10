@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Auth slots now propagate from the upgrade-time `HttpContext` onto `SignalRConnection.Items` and per-Hub-method `IInvocationContext.Items`** — closes a real defect where `IUserStateAccessor` (and any other consumer of `AuthenticationContextKeys.AuthenticatedScheme` / `ApplicationUserCache`) saw an empty per-invocation `Items` bag on every Hub method dispatch, causing the `IApplicationUserResolver` to be re-invoked per invocation (IdP hammering for audience-auth long-lived connections). Two coordinated changes to land the fix:
+  - `InvocationContextHubFilter.OnConnectedAsync` now reads `hubLifetimeContext.Context.GetHttpContext().Items` (the upgrade request's bag, populated by ASP.NET's auth pipeline + the Cirreum forward selector + any audience-auth claims-transformer that ran) and copies the two well-known auth slots onto the freshly-materialized `SignalRConnection.Items` (which aliases `HubCallerContext.Items`, persisting for the connection's lifetime). Honors ADR-0002 transport-adapter invariant #2.
+  - `SignalRInvocationContext` constructor now seeds the fresh per-invocation `Items` bag with the same two slots from `Connection.Items`. Snapshot copy — per-invocation writes do NOT propagate back to `Connection.Items`, preserving per-message isolation per ADR-0002 invariant #6.
+- **Local `internal static class AuthenticationContextKeys`** added under `Cirreum.Invocation.SignalR` to hold the two const string keys (`AuthenticatedScheme`, `ApplicationUserCache`) that mirror their canonical definitions in `Cirreum.Security.AuthenticationContextKeys` (Cirreum.Core L2). Consts are duplicated rather than taking a Cirreum.Core PackageReference to preserve the L2-peers-don't-cross-reference rule. Same pattern already used by `AudienceProviderRoleClaimsTransformer` in `Cirreum.Runtime.AuthorizationProvider`.
+
+The fix is scoped to long-lived adapters (this package + `Cirreum.Invocation.WebSockets`) and `Cirreum.Services.Server`'s `UserStateAccessor` (separate patch). HTTP-sourced invocations were unaffected by the original defect because `HttpInvocationContext.Items` aliases `HttpContext.Items` directly, so the cache lifetime trivially aligned with the request lifetime.
+
 ## [1.2.0] - 2026-05-09
 
 ### Added

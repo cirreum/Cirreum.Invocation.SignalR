@@ -48,6 +48,25 @@ internal sealed class InvocationContextHubFilter(
 			timeProvider.GetUtcNow());
 		hubLifetimeContext.Context.Items[_connectionItemsKey] = connection;
 
+		// Copy well-known authentication slots from the upgrade-time HttpContext.Items onto
+		// Connection.Items so the connection-lifetime bag carries the auth context that the
+		// HTTP middleware established for this connection's upgrade request. The forward
+		// selector always stamps AuthenticatedScheme; the audience-auth claims transformer
+		// stamps ApplicationUserCache when an IApplicationUserResolver matches. Per-Hub-method
+		// SignalRInvocationContext construction seeds per-invocation Items from these slots,
+		// so consumers like UserStateAccessor read uniformly across HTTP and SignalR without
+		// hitting the IdP on every Hub method invocation. See ADR-0002 transport-adapter
+		// invariant #2.
+		var httpContext = hubLifetimeContext.Context.GetHttpContext();
+		if (httpContext is not null) {
+			if (httpContext.Items.TryGetValue(AuthenticationContextKeys.AuthenticatedScheme, out var scheme)) {
+				connection.Items[AuthenticationContextKeys.AuthenticatedScheme] = scheme;
+			}
+			if (httpContext.Items.TryGetValue(AuthenticationContextKeys.ApplicationUserCache, out var appUser)) {
+				connection.Items[AuthenticationContextKeys.ApplicationUserCache] = appUser;
+			}
+		}
+
 		// Synthetic invocation scope so IUserStateAccessor and other ambient consumers
 		// work normally inside IConnectionLifecycle callbacks (ADR-0002 invariant #7).
 		var invocation = new SignalRInvocationContext(
