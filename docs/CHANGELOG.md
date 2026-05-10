@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-09
+
 ### Added
 
 - **`SignalRConnection.SendAsync<T>` overloads (2)** — implementations of the new `IInvocationConnection.SendAsync<T>` members from the upcoming `Cirreum.InvocationProvider` release. Both overloads forward to the captured `ISingleClientProxy.SendAsync(method, payload, ct)` so the SignalR pipeline owns serialization through the configured `IHubProtocol` (JSON or MessagePack — controlled by app via `AddSignalR().AddJsonProtocol(...)` / `.AddMessagePackProtocol()`). The no-method overload uses the runtime payload type name as the SignalR method (matching the convention `connection.on("ChatMessage", ...)`); the keyed overload accepts an explicit method name.
