@@ -39,13 +39,12 @@ L5 Runtime Extensions
 
 | Type | Role |
 |---|---|
-| `SignalRInvocationRegistrar` | Concrete registrar — maps Hubs, wires the HubFilter, registers the `IConnectionSender`, validates settings |
+| `SignalRInvocationRegistrar` | Concrete registrar — maps Hubs, wires the HubFilter, validates settings |
 | `SignalRInvocationSettings` / `SignalRInvocationInstanceSettings` (`Cirreum.Invocation.Configuration`) | Typed settings bound from `Cirreum:Invocation:Providers:SignalR` |
 | `SignalRHubMapping` (`Cirreum.Invocation.SignalR`) | DI-stashed `(InstanceKey, HubType)` record produced by the L5 `AddSignalR<THub>` extension and consumed by the registrar |
 | `InvocationContextHubFilter` (`Cirreum.Invocation.SignalR`, internal) | `IHubFilter` covering all three lifecycle hooks — publishes `IInvocationContext`, materializes `IInvocationConnection` at upgrade, dispatches `IConnectionLifecycle` callbacks |
-| `SignalRConnection` (`Cirreum.Invocation.SignalR`, internal) | `IInvocationConnection` adapter wrapping `HubCallerContext`; aliases `Items` and captures the SignalR caller proxy for server-push |
+| `SignalRConnection` (`Cirreum.Invocation.SignalR`, internal) | `IInvocationConnection` adapter wrapping `HubCallerContext`; aliases `Items` and forwards `SendAsync<T>` overloads through the captured SignalR caller proxy |
 | `SignalRInvocationContext` (`Cirreum.Invocation.SignalR`, internal) | `IInvocationContext` adapter for SignalR — used both for Hub method invocations and for synthetic scopes around lifecycle hooks |
-| `SignalRConnectionSender` (`Cirreum.Invocation.SignalR`, internal) | `IConnectionSender` impl — server-initiated push through the active connection's captured caller proxy |
 
 ## How registration works
 
@@ -86,17 +85,25 @@ The L5 `MapSignalRInvocation()` endpoint-mapping method resolves all `Invocation
 
 ## Server-initiated push
 
-Inject `IConnectionSender` from a SignalR Hub method (or any code running inside the SignalR invocation pipeline) to send to the calling client without depending on `IHubContext<THub>` directly:
+From cross-cutting code (Conductor command handlers, validators, services) running inside the SignalR invocation pipeline, push to the calling client through the ambient connection — no separate service to inject:
 
 ```csharp
-public sealed class ChatHub(IConnectionSender sender) : Hub {
-    public async Task Echo(string text) {
-        await sender.SendAsync("Echo", new { text, at = DateTime.UtcNow });
+public sealed class NotifyHandler(IInvocationContextAccessor accessor)
+    : ICommandHandler<NotifyCommand> {
+
+    public async ValueTask<Result> Handle(NotifyCommand cmd, CancellationToken ct) {
+        var connection = accessor.Current?.Connection;
+        if (connection is not null) {
+            await connection.SendAsync("Notification", cmd.Payload, ct);
+        }
+        return Result.Success();
     }
 }
 ```
 
-The no-method `SendAsync<T>(payload)` overload uses the runtime type name as the SignalR method-routing convention (e.g. `SendAsync(new ChatMessage(...))` dispatches to client `connection.on("ChatMessage", ...)`); the keyed `SendAsync<T>(method, payload)` overload accepts an explicit method name.
+The no-method `SendAsync<T>(payload)` overload uses the runtime type name as the SignalR method-routing convention (e.g. `SendAsync(new ChatMessage(...))` dispatches to client `connection.on("ChatMessage", ...)`); the keyed `SendAsync<T>(method, payload)` overload accepts an explicit method name. Serialization flows through SignalR's configured `IHubProtocol` (JSON or MessagePack — set via `AddSignalR().AddJsonProtocol(...)` / `.AddMessagePackProtocol()`).
+
+Hub method bodies that already use `Clients.Caller.SendAsync(...)` directly are equivalent — both paths push to the same target through the same SignalR pipeline.
 
 ## Connection lifecycle
 
@@ -134,7 +141,7 @@ Per-transport mapping for `DisconnectInfo`: SignalR's `Exception?` parameter fro
 
 ## Dependencies
 
-- **Cirreum.InvocationProvider** `1.1.0+` — L2 abstractions (`InvocationProviderRegistrar`, `IInvocationContext`, `IInvocationContextAccessor`, `IConnectionLifecycle`, `DisconnectInfo`, etc.)
+- **Cirreum.InvocationProvider** `1.3.0+` — L2 abstractions (`InvocationProviderRegistrar`, `IInvocationContext`, `IInvocationContextAccessor`, `IInvocationConnection` (with `SendAsync<T>` and `Abort()`), `IConnectionLifecycle`, `DisconnectInfo`, etc.)
 - **Microsoft.AspNetCore.App** (framework reference) — SignalR (`Microsoft.AspNetCore.SignalR`), endpoint routing
 
 ## Versioning

@@ -22,10 +22,11 @@ using System.Security.Claims;
 /// effectively connection-scoped from the framework's perspective.
 /// </para>
 /// <para>
-/// <see cref="CallerProxy"/> is captured at upgrade and used by
-/// <see cref="SignalRConnectionSender"/> to push to this specific connection. Captured
-/// here (vs. resolved per-send through <c>IHubContext&lt;THub&gt;</c>) because the L3
-/// layer doesn't know <c>THub</c> at compile time.
+/// The caller proxy is captured at upgrade and used by the
+/// <see cref="SendAsync{T}(string, T, CancellationToken)"/> overloads to push to this
+/// specific connection. Captured here (vs. resolved per-send through
+/// <c>IHubContext&lt;THub&gt;</c>) because the L3 layer doesn't know <c>THub</c> at
+/// compile time.
 /// </para>
 /// </remarks>
 internal sealed class SignalRConnection(
@@ -53,18 +54,17 @@ internal sealed class SignalRConnection(
 		context.Abort();
 	}
 
-	/// <summary>
-	/// Proxy to this connection's caller, captured at upgrade. Used by
-	/// <see cref="SignalRConnectionSender"/> for server-initiated push.
-	/// </summary>
-	/// <remarks>
-	/// Capturing relies on SignalR's <c>SingleClientProxy</c> being effectively a
-	/// (HubLifetimeManager, ConnectionId) tuple — no per-method-invocation state,
-	/// no captured DI scope. This has held across every SignalR release to date,
-	/// but is an implementation detail rather than a documented invariant. If a
-	/// future SignalR release changes that, switch to lazy resolution through
-	/// IHubContext&lt;THub&gt; per send.
-	/// </remarks>
-	internal ISingleClientProxy CallerProxy { get; } = callerProxy;
+	public ValueTask SendAsync<T>(T payload, CancellationToken cancellationToken = default) {
+		// Route by runtime type name when no method is specified — natural fit for SignalR
+		// clients that listen via connection.on(MessageType, handler).
+		var method = payload?.GetType().Name ?? typeof(T).Name;
+		return this.SendAsync(method, payload, cancellationToken);
+	}
+
+	public async ValueTask SendAsync<T>(string method, T payload, CancellationToken cancellationToken = default) {
+		// SendAsync on the captured ISingleClientProxy returns Task; the SignalR pipeline
+		// handles all serialization through the configured IHubProtocol (JSON or MessagePack).
+		await callerProxy.SendAsync(method, payload, cancellationToken);
+	}
 
 }

@@ -72,10 +72,6 @@ public sealed class SignalRInvocationRegistrar
 		services.TryAddSingleton<InvocationContextHubFilter>();
 		services.Configure<HubOptions>(o => o.AddFilter<InvocationContextHubFilter>());
 
-		// Per-invocation IConnectionSender — resolves the active SignalRConnection from
-		// the ambient accessor and dispatches sends through its captured caller proxy.
-		services.TryAddScoped<IConnectionSender, SignalRConnectionSender>();
-
 	}
 
 	/// <inheritdoc/>

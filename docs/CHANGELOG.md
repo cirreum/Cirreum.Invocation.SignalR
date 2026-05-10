@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`SignalRConnection.SendAsync<T>` overloads (2)** — implementations of the new `IInvocationConnection.SendAsync<T>` members from the upcoming `Cirreum.InvocationProvider` release. Both overloads forward to the captured `ISingleClientProxy.SendAsync(method, payload, ct)` so the SignalR pipeline owns serialization through the configured `IHubProtocol` (JSON or MessagePack — controlled by app via `AddSignalR().AddJsonProtocol(...)` / `.AddMessagePackProtocol()`). The no-method overload uses the runtime payload type name as the SignalR method (matching the convention `connection.on("ChatMessage", ...)`); the keyed overload accepts an explicit method name.
+
+### Changed
+
+- **`SignalRConnectionSender` consolidated into `SignalRConnection.SendAsync`** — the standalone scoped service and its DI registration in `SignalRInvocationRegistrar.RegisterSource` are gone; the same forwarding logic now lives on the `SignalRConnection` itself, satisfying the new `IInvocationConnection.SendAsync<T>` contract from the upcoming `Cirreum.InvocationProvider` release. Cross-cutting code that previously injected `IConnectionSender` now reads the connection from the ambient `IInvocationContextAccessor` and calls `SendAsync` directly — same target, one indirection fewer. Apps see no behavior difference; the wire bytes are identical. Captured as `### Changed` (not `### Removed`) under the same window-of-no-consumers, framework-owned-implementer-set precedent as the L2 1.1.0 / 1.2.0 cascades — this is a v1.x pre-adoption surface; the consolidation is a Minor.
+
+- Bumped `Cirreum.InvocationProvider` dependency to consume the `IInvocationConnection.SendAsync` interface widening and the corresponding consolidation of `IConnectionSender`.
+
+### Migration
+
+App-side: see the migration block in the upcoming `Cirreum.InvocationProvider` release notes — replace `IConnectionSender` injections with `accessor.Current?.Connection?.SendAsync(...)`. SignalR Hub method bodies that already used `Clients.Caller.SendAsync(...)` directly are unaffected; the change targets cross-cutting code paths (Conductor command/query handlers, validators) that pushed via the framework abstraction.
+
 ## [1.1.0] - 2026-05-09
 
 ### Added
